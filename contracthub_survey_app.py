@@ -2,130 +2,58 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
-import json
 import time
 
-# ── Page config ────────────────────────────────────────────────────────────────
+# Page config
 st.set_page_config(
-    page_title="Khảo sát Hợp đồng B2B",
+    page_title="Khảo sát Ứng dụng AI Hỗ trợ Soạn thảo Hợp đồng B2B",
     page_icon="📋",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# ── Styling ────────────────────────────────────────────────────────────────────
+# Styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-    }
-
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .main { background-color: #F8F9FB; }
-
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 4rem;
-        max-width: 720px;
-    }
-
+    .block-container { padding-top: 2rem; padding-bottom: 4rem; max-width: 720px; }
     .survey-header {
         background: linear-gradient(135deg, #1B3A6B 0%, #2563EB 100%);
-        border-radius: 12px;
-        padding: 2rem 2rem 1.5rem 2rem;
-        margin-bottom: 2rem;
-        color: white;
+        border-radius: 12px; padding: 2rem 2rem 1.5rem 2rem;
+        margin-bottom: 2rem; color: white;
     }
-
-    .survey-header h1 {
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin: 0 0 0.5rem 0;
-        color: white;
-    }
-
-    .survey-header p {
-        font-size: 0.9rem;
-        opacity: 0.85;
-        margin: 0;
-        line-height: 1.6;
-    }
-
+    .survey-header h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0; color: white; }
+    .survey-header p { font-size: 0.9rem; opacity: 0.85; margin: 0; line-height: 1.6; }
     .section-label {
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #2563EB;
-        margin-bottom: 0.5rem;
-        margin-top: 2rem;
+        font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
+        text-transform: uppercase; color: #2563EB; margin-bottom: 0.5rem; margin-top: 2rem;
     }
-
-    .section-divider {
-        border: none;
-        border-top: 1px solid #E2E8F0;
-        margin: 1.5rem 0 1rem 0;
-    }
-
-    .progress-bar-container {
-        background: #E2E8F0;
-        border-radius: 99px;
-        height: 6px;
-        margin-bottom: 2rem;
-    }
-
-    .stRadio > label { font-size: 0.9rem; }
-    .stCheckbox > label { font-size: 0.9rem; }
-
+    .section-divider { border: none; border-top: 1px solid #E2E8F0; margin: 1.5rem 0 1rem 0; }
+    .progress-bar-container { background: #E2E8F0; border-radius: 99px; height: 6px; margin-bottom: 2rem; }
     .stButton > button {
-        background: #2563EB;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.6rem 2rem;
-        font-size: 0.95rem;
-        font-weight: 500;
-        width: 100%;
-        margin-top: 1rem;
-        transition: background 0.2s;
+        background: #2563EB; color: white; border: none; border-radius: 8px;
+        padding: 0.6rem 2rem; font-size: 0.95rem; font-weight: 500;
+        width: 100%; margin-top: 1rem; transition: background 0.2s;
     }
-
-    .stButton > button:hover {
-        background: #1D4ED8;
-    }
-
+    .stButton > button:hover { background: #1D4ED8; }
     .success-box {
-        background: #F0FDF4;
-        border: 1px solid #86EFAC;
-        border-radius: 10px;
-        padding: 2rem;
-        text-align: center;
-        margin-top: 2rem;
+        background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 10px;
+        padding: 2rem; text-align: center; margin-top: 2rem;
     }
-
     .disqualified-box {
-        background: #FFF7ED;
-        border: 1px solid #FED7AA;
-        border-radius: 10px;
-        padding: 2rem;
-        text-align: center;
-        margin-top: 2rem;
+        background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 10px;
+        padding: 2rem; text-align: center; margin-top: 2rem;
     }
-
-    .stSlider > div { padding-top: 0.5rem; }
-
     div[data-testid="stForm"] {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #E2E8F0;
-        margin-bottom: 1rem;
+        background: white; border-radius: 12px; padding: 1.5rem;
+        border: 1px solid #E2E8F0; margin-bottom: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Google Sheets connection ───────────────────────────────────────────────────
+# Google Sheets connection
 def get_sheet():
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
@@ -137,13 +65,12 @@ def get_sheet():
         client = gspread.authorize(creds)
         sheet = client.open(st.secrets["sheet_name"]).sheet1
         return sheet
-    except Exception as e:
+    except Exception:
         return None
 
 def save_response(data: dict):
     sheet = get_sheet()
     if sheet is None:
-        # Fallback: save locally
         import os, csv
         file_exists = os.path.exists("responses.csv")
         with open("responses.csv", "a", newline="", encoding="utf-8") as f:
@@ -152,9 +79,7 @@ def save_response(data: dict):
                 writer.writeheader()
             writer.writerow(data)
         return True
-
     try:
-        # Header row if empty
         if sheet.row_count < 1 or not sheet.row_values(1):
             sheet.append_row(list(data.keys()))
         sheet.append_row(list(data.values()))
@@ -162,17 +87,17 @@ def save_response(data: dict):
     except Exception:
         return False
 
-# ── Session state init ─────────────────────────────────────────────────────────
+# Session state
 if "step" not in st.session_state:
     st.session_state.step = 1
 if "answers" not in st.session_state:
     st.session_state.answers = {}
 
-# ── Header ─────────────────────────────────────────────────────────────────────
+# Header
 st.markdown("""
 <div class="survey-header">
-    <h1>📋 Khảo sát Quản lý Hợp đồng B2B</h1>
-    <p>Nghiên cứu học thuật thuộc chương trình Thạc sĩ Trí tuệ Nhân tạo Ứng dụng, Swiss UMEF University.
+    <h1>📋 Khảo sát Ứng dụng AI Hỗ trợ Soạn thảo và Kiểm tra Hợp đồng B2B</h1>
+    <p>Nghiên cứu học thuật thuộc chương trình Thạc sĩ Trí tuệ Nhân tạo Ứng dụng, Swiss UMEF University of Applied Sciences Institute (Geneva).<br>
     Thời gian hoàn thành: 5 đến 7 phút. Thông tin được bảo mật và chỉ dùng cho mục đích nghiên cứu.</p>
 </div>
 """, unsafe_allow_html=True)
@@ -180,7 +105,6 @@ st.markdown("""
 step = st.session_state.step
 total_steps = 4
 
-# Progress
 if step <= total_steps:
     progress_pct = int((step - 1) / total_steps * 100)
     st.markdown(f"""
@@ -202,7 +126,7 @@ if step == 1:
         )
 
         q2 = st.radio(
-            "**Câu 2.** Giá trị hợp đồng bạn thường làm việc ở mức nào?",
+            "**Câu 2.** Giá trị hợp đồng bạn làm việc phổ biến nhất (chiếm tỷ trọng nhiều nhất) ở mức nào? *(Nếu bạn làm việc ở nhiều mức giá trị khác nhau, vui lòng chọn mức bạn xử lý thường xuyên nhất)*",
             [
                 "Dưới 500 triệu VND",
                 "500 triệu đến 5 tỷ VND",
@@ -218,7 +142,7 @@ if step == 1:
         if q1 is None or q2 is None:
             st.warning("Vui lòng trả lời đầy đủ cả 2 câu hỏi.")
         elif q1 == "Không" or q2 in ["Dưới 500 triệu VND", "Tôi không làm việc trực tiếp với giá trị hợp đồng"]:
-            st.session_state.step = 99  # disqualified
+            st.session_state.step = 99
             st.rerun()
         else:
             st.session_state.answers["q1_participation"] = q1
@@ -232,25 +156,24 @@ elif step == 2:
 
     with st.form("form_step2"):
         st.markdown("**Câu 3.** Trong quá trình soạn thảo hoặc review hợp đồng, bạn đã từng gặp tình huống nào sau đây chưa? *(Chọn tất cả đáp án phù hợp)*")
-        c1 = st.checkbox("Phải nhập lại thông tin từ báo giá vào hợp đồng bằng tay")
+        c1 = st.checkbox("Phải nhập lại thông tin từ báo giá / chào thầu vào hợp đồng bằng tay")
         c2 = st.checkbox("Phát hiện số liệu không khớp giữa các điều khoản (ví dụ: thời hạn thanh toán không khớp với điều kiện bảo lãnh ngân hàng)")
         c3 = st.checkbox("Phát hiện lỗi copy-paste trong bảng thiết bị hoặc thông số kỹ thuật")
         c4 = st.checkbox("Phải sửa hợp đồng sau khi đã gần ký vì lỗi dữ liệu")
-        c5 = st.checkbox("Chưa gặp tình huống nào trong danh sách trên")
+        c5 = st.checkbox("Trải qua quá trình đàm phán / chỉnh sửa kéo dài qua nhiều phiên bản, các điều khoản không còn nhất quán hoặc mâu thuẫn với nhau")
+        c6 = st.checkbox("Phải đối chiếu nhiều tài liệu (báo giá, PO, email, phụ lục...) để xác minh thông tin")
+        c7 = st.checkbox("Chưa gặp tình huống nào trong danh sách trên")
 
         st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
 
-        q4 = st.radio(
-            "**Câu 4.** Nếu bạn đã từng phát hiện lỗi trong hợp đồng, hậu quả nghiêm trọng nhất là gì?",
-            [
-                "Mất thời gian sửa nhưng không ảnh hưởng lớn",
-                "Chậm tiến độ ký kết",
-                "Phát sinh chi phí hoặc rủi ro tài chính",
-                "Ảnh hưởng đến quan hệ với đối tác hoặc khách hàng",
-                "Chưa từng gặp lỗi hợp đồng"
-            ],
-            index=None
-        )
+        st.markdown("**Câu 4.** Nếu bạn đã từng phát hiện lỗi trong hợp đồng, những hậu quả nào sau đây bạn đã từng gặp phải? *(Chọn tất cả đáp án phù hợp)*")
+        d1 = st.checkbox("Mất thời gian sửa nhưng không ảnh hưởng lớn")
+        d2 = st.checkbox("Chậm tiến độ ký kết")
+        d3 = st.checkbox("Phát sinh chi phí hoặc rủi ro tài chính")
+        d4 = st.checkbox("Ảnh hưởng đến quan hệ với đối tác hoặc khách hàng")
+        d5 = st.checkbox("Bị từ chối nhận hàng hoặc bị phạt vi phạm hợp đồng")
+        d6 = st.checkbox("Bị khiển trách hoặc ảnh hưởng đến đánh giá hiệu suất (performance) công việc từ cấp trên")
+        d7 = st.checkbox("Chưa từng gặp lỗi hợp đồng")
 
         st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
 
@@ -264,20 +187,31 @@ elif step == 2:
         submitted = st.form_submit_button("Tiếp theo")
 
     if submitted:
-        if q4 is None:
-            st.warning("Vui lòng trả lời Câu 4.")
-        else:
-            selected = []
-            if c1: selected.append("Nhập lại thông tin thủ công")
-            if c2: selected.append("Số liệu không khớp giữa điều khoản")
-            if c3: selected.append("Lỗi copy-paste thiết bị")
-            if c4: selected.append("Sửa hợp đồng sát thời điểm ký")
-            if c5: selected.append("Chưa gặp")
-            st.session_state.answers["q3_pain_points"] = ", ".join(selected) if selected else "Không chọn"
-            st.session_state.answers["q4_consequence"] = q4
-            st.session_state.answers["q5_complexity"] = q5
-            st.session_state.step = 3
-            st.rerun()
+        # Q3 selections
+        q3_selected = []
+        if c1: q3_selected.append("Nhập lại thông tin thủ công")
+        if c2: q3_selected.append("Số liệu không khớp giữa điều khoản")
+        if c3: q3_selected.append("Lỗi copy-paste thiết bị")
+        if c4: q3_selected.append("Sửa hợp đồng sát thời điểm ký")
+        if c5: q3_selected.append("Điều khoản mâu thuẫn qua nhiều phiên bản đàm phán")
+        if c6: q3_selected.append("Đối chiếu nhiều tài liệu để xác minh")
+        if c7: q3_selected.append("Chưa gặp")
+
+        # Q4 selections
+        q4_selected = []
+        if d1: q4_selected.append("Mất thời gian sửa")
+        if d2: q4_selected.append("Chậm tiến độ ký kết")
+        if d3: q4_selected.append("Rủi ro tài chính")
+        if d4: q4_selected.append("Ảnh hưởng quan hệ đối tác")
+        if d5: q4_selected.append("Bị từ chối nhận hàng hoặc bị phạt")
+        if d6: q4_selected.append("Ảnh hưởng đánh giá hiệu suất")
+        if d7: q4_selected.append("Chưa từng gặp lỗi")
+
+        st.session_state.answers["q3_pain_points"] = ", ".join(q3_selected) if q3_selected else "Không chọn"
+        st.session_state.answers["q4_consequences"] = ", ".join(q4_selected) if q4_selected else "Không chọn"
+        st.session_state.answers["q5_complexity"] = q5
+        st.session_state.step = 3
+        st.rerun()
 
 # ── STEP 3: AI Adoption ────────────────────────────────────────────────────────
 elif step == 3:
@@ -293,12 +227,7 @@ elif step == 3:
 
         q6 = st.radio(
             "**Câu 6.** Bạn có sẵn sàng thử nghiệm hệ thống AI như trên không?",
-            [
-                "Có, sẵn sàng thử ngay",
-                "Có, nhưng cần xem thêm kết quả thực tế trước",
-                "Chưa chắc",
-                "Không, quy trình hiện tại của tôi đã đủ tốt"
-            ],
+            ["Rất sẵn sàng", "Sẵn sàng", "Phân vân", "Không sẵn sàng"],
             index=None
         )
 
@@ -321,14 +250,15 @@ elif step == 3:
         b1 = st.checkbox("Lo ngại về bảo mật dữ liệu hợp đồng")
         b2 = st.checkbox("Thiếu tin tưởng vào độ chính xác của AI")
         b3 = st.checkbox("Kháng cự từ nội bộ hoặc thói quen làm việc")
-        b4 = st.checkbox("Chi phí triển khai")
-        b5 = st.checkbox("Không có nhu cầu vì quy trình hiện tại đã ổn")
-        b6 = st.checkbox("Khác")
+        b4 = st.checkbox("Thiếu sự ủng hộ từ Ban lãnh đạo")
+        b5 = st.checkbox("Chi phí triển khai")
+        b6 = st.checkbox("Không có nhu cầu vì quy trình hiện tại đã ổn")
+        b7 = st.checkbox("Khác")
 
         st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
 
         q9 = st.slider(
-            "**Câu 9.** Nếu hệ thống được dùng thử miễn phí 3 tháng, khả năng bạn giới thiệu cho đồng nghiệp?",
+            "**Câu 9.** Giả sử dữ liệu hợp đồng chỉ được xử lý và lưu trữ trong nội bộ công ty, không chia sẻ ra bên ngoài. Nếu hệ thống này được cung cấp miễn phí để dùng thử 3 tháng, khả năng bạn giới thiệu cho đồng nghiệp hoặc tổ chức là bao nhiêu?",
             min_value=1, max_value=10, value=5,
             help="1 = Chắc chắn không, 10 = Chắc chắn có"
         )
@@ -340,22 +270,23 @@ elif step == 3:
         submitted = st.form_submit_button("Tiếp theo")
 
     if submitted:
-        barriers_selected = []
-        if b1: barriers_selected.append("Bảo mật dữ liệu")
-        if b2: barriers_selected.append("Độ chính xác AI")
-        if b3: barriers_selected.append("Kháng cự nội bộ")
-        if b4: barriers_selected.append("Chi phí")
-        if b5: barriers_selected.append("Không có nhu cầu")
-        if b6: barriers_selected.append("Khác")
+        barriers = []
+        if b1: barriers.append("Bảo mật dữ liệu")
+        if b2: barriers.append("Độ chính xác AI")
+        if b3: barriers.append("Kháng cự nội bộ")
+        if b4: barriers.append("Thiếu ủng hộ từ lãnh đạo")
+        if b5: barriers.append("Chi phí")
+        if b6: barriers.append("Không có nhu cầu")
+        if b7: barriers.append("Khác")
 
         if q6 is None or q7 is None:
             st.warning("Vui lòng trả lời Câu 6 và Câu 7.")
-        elif len(barriers_selected) > 2:
+        elif len(barriers) > 2:
             st.warning("Câu 8: Vui lòng chọn tối đa 2 rào cản.")
         else:
             st.session_state.answers["q6_adoption_intent"] = q6
             st.session_state.answers["q7_hitl_acceptance"] = q7
-            st.session_state.answers["q8_barriers"] = ", ".join(barriers_selected) if barriers_selected else "Không chọn"
+            st.session_state.answers["q8_barriers"] = ", ".join(barriers) if barriers else "Không chọn"
             st.session_state.answers["q9_nps"] = q9
             st.session_state.step = 4
             st.rerun()
@@ -371,12 +302,10 @@ elif step == 4:
              "Quản lý dự án", "Pháp lý / Hành chính hợp đồng",
              "Tài chính / Kế toán", "Khác"]
         )
-
         q11 = st.selectbox(
             "**Câu 11.** Số năm kinh nghiệm làm việc với hợp đồng B2B?",
             ["(Bỏ qua)", "Dưới 2 năm", "2 đến 5 năm", "5 đến 10 năm", "Trên 10 năm"]
         )
-
         q12 = st.selectbox(
             "**Câu 12.** Ngành bạn đang làm việc?",
             ["(Bỏ qua)", "Thiết bị công nghiệp / Năng lượng", "Xây dựng / EPC / Tổng thầu",
@@ -402,10 +331,7 @@ elif step == 4:
             time.sleep(0.8)
             success = save_response(st.session_state.answers)
 
-        if success:
-            st.session_state.step = 100
-        else:
-            st.session_state.step = 101
+        st.session_state.step = 100 if success else 101
         st.rerun()
 
 # ── DONE ───────────────────────────────────────────────────────────────────────
@@ -414,13 +340,14 @@ elif step == 100:
     <div class="success-box">
         <div style="font-size:2.5rem;margin-bottom:1rem;">✅</div>
         <h3 style="color:#166534;margin-bottom:0.5rem;">Cảm ơn bạn đã tham gia!</h3>
-        <p style="color:#15803D;margin:0;">Phản hồi của bạn đã được ghi nhận thành công.<br>
-        Kết quả nghiên cứu sẽ được tổng hợp và công bố trong luận văn Thạc sĩ tháng 8/2026.</p>
+        <p style="color:#15803D;margin:0;">Tâm vô cùng biết ơn thời gian quý báu bạn đã dành ra để hỗ trợ tham gia khảo sát.<br>
+        Kết quả sẽ được sử dụng trong nghiên cứu học thuật về ứng dụng AI trong soạn thảo và kiểm tra hợp đồng thương mại B2B.<br><br>
+        Nếu bạn muốn nhận tóm tắt kết quả nghiên cứu, vui lòng để lại email ở phần trên.</p>
     </div>
     """, unsafe_allow_html=True)
 
 elif step == 101:
-    st.error("Có lỗi xảy ra khi lưu phản hồi. Vui lòng thử lại sau hoặc liên hệ trực tiếp.")
+    st.error("Có lỗi xảy ra khi lưu phản hồi. Vui lòng thử lại.")
     if st.button("Thử lại"):
         success = save_response(st.session_state.answers)
         if success:
