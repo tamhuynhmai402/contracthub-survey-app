@@ -4,7 +4,6 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import time
 
-# Page config
 st.set_page_config(
     page_title="Khảo sát Ứng dụng AI Hỗ trợ Soạn thảo Hợp đồng B2B",
     page_icon="📋",
@@ -12,7 +11,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -35,7 +33,7 @@ st.markdown("""
     .stButton > button {
         background: #2563EB; color: white; border: none; border-radius: 8px;
         padding: 0.6rem 2rem; font-size: 0.95rem; font-weight: 500;
-        width: 100%; margin-top: 1rem; transition: background 0.2s;
+        width: 100%; margin-top: 1rem;
     }
     .stButton > button:hover { background: #1D4ED8; }
     .success-box {
@@ -53,7 +51,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Google Sheets connection
 def get_sheet():
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
@@ -63,8 +60,7 @@ def get_sheet():
         ]
         creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         client = gspread.authorize(creds)
-        sheet = client.open(st.secrets["sheet_name"]).sheet1
-        return sheet
+        return client.open(st.secrets["sheet_name"]).sheet1
     except Exception:
         return None
 
@@ -80,20 +76,18 @@ def save_response(data: dict):
             writer.writerow(data)
         return True
     try:
-        if sheet.row_count < 1 or not sheet.row_values(1):
+        if not sheet.row_values(1):
             sheet.append_row(list(data.keys()))
         sheet.append_row(list(data.values()))
         return True
     except Exception:
         return False
 
-# Session state
 if "step" not in st.session_state:
     st.session_state.step = 1
 if "answers" not in st.session_state:
     st.session_state.answers = {}
 
-# Header
 st.markdown("""
 <div class="survey-header">
     <h1>📋 Khảo sát Ứng dụng AI Hỗ trợ Soạn thảo và Kiểm tra Hợp đồng B2B</h1>
@@ -114,28 +108,21 @@ if step <= total_steps:
     """, unsafe_allow_html=True)
     st.caption(f"Phần {step} / {total_steps}")
 
+LIKERT = ["Hoàn toàn không đồng ý", "Không đồng ý", "Trung lập", "Đồng ý", "Hoàn toàn đồng ý"]
+
 # ── STEP 1: Screening ──────────────────────────────────────────────────────────
 if step == 1:
     st.markdown('<div class="section-label">Phần 1 — Xác nhận đối tượng</div>', unsafe_allow_html=True)
-
     with st.form("form_step1"):
         q1 = st.radio(
             "**Câu 1.** Trong công việc hiện tại, bạn có tham gia vào việc soạn thảo, review, hoặc phê duyệt hợp đồng thương mại B2B không?",
-            ["Có, thường xuyên", "Có, thỉnh thoảng", "Không"],
-            index=None
+            ["Có, thường xuyên", "Có, thỉnh thoảng", "Không"], index=None
         )
-
         q2 = st.radio(
-            "**Câu 2.** Giá trị hợp đồng bạn làm việc phổ biến nhất (chiếm tỷ trọng nhiều nhất) ở mức nào? *(Nếu bạn làm việc ở nhiều mức giá trị khác nhau, vui lòng chọn mức bạn xử lý thường xuyên nhất)*",
-            [
-                "Dưới 500 triệu VND",
-                "500 triệu đến 5 tỷ VND",
-                "Trên 5 tỷ VND",
-                "Tôi không làm việc trực tiếp với giá trị hợp đồng"
-            ],
-            index=None
+            "**Câu 2.** Giá trị hợp đồng bạn làm việc phổ biến nhất ở mức nào? *(Nếu làm nhiều mức, chọn mức xử lý thường xuyên nhất)*",
+            ["Dưới 500 triệu VND", "500 triệu đến 5 tỷ VND", "Trên 5 tỷ VND",
+             "Tôi không làm việc trực tiếp với giá trị hợp đồng"], index=None
         )
-
         submitted = st.form_submit_button("Tiếp theo")
 
     if submitted:
@@ -153,7 +140,6 @@ if step == 1:
 # ── STEP 2: Pain Points ────────────────────────────────────────────────────────
 elif step == 2:
     st.markdown('<div class="section-label">Phần 2 — Thực trạng vấn đề</div>', unsafe_allow_html=True)
-
     with st.form("form_step2"):
         st.markdown("**Câu 3.** Trong quá trình soạn thảo hoặc review hợp đồng, bạn đã từng gặp tình huống nào sau đây chưa? *(Chọn tất cả đáp án phù hợp)*")
         c1 = st.checkbox("Phải nhập lại thông tin từ báo giá / chào thầu vào hợp đồng bằng tay")
@@ -166,13 +152,13 @@ elif step == 2:
 
         st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
 
-        st.markdown("**Câu 4.** Nếu bạn đã từng phát hiện lỗi trong hợp đồng, những hậu quả nào sau đây bạn đã từng gặp phải? *(Chọn tất cả đáp án phù hợp)*")
+        st.markdown("**Câu 4.** Nếu bạn đã từng phát hiện lỗi trong hợp đồng, những hậu quả nào bạn đã từng gặp phải? *(Chọn tất cả đáp án phù hợp)*")
         d1 = st.checkbox("Mất thời gian sửa nhưng không ảnh hưởng lớn")
         d2 = st.checkbox("Chậm tiến độ ký kết")
         d3 = st.checkbox("Phát sinh chi phí hoặc rủi ro tài chính")
         d4 = st.checkbox("Ảnh hưởng đến quan hệ với đối tác hoặc khách hàng")
         d5 = st.checkbox("Bị từ chối nhận hàng hoặc bị phạt vi phạm hợp đồng")
-        d6 = st.checkbox("Bị khiển trách hoặc ảnh hưởng đến đánh giá hiệu suất (performance) công việc từ cấp trên")
+        d6 = st.checkbox("Bị khiển trách hoặc ảnh hưởng đến đánh giá hiệu suất (performance) từ cấp trên")
         d7 = st.checkbox("Chưa từng gặp lỗi hợp đồng")
 
         st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
@@ -187,48 +173,44 @@ elif step == 2:
         submitted = st.form_submit_button("Tiếp theo")
 
     if submitted:
-        # Q3 selections
-        q3_selected = []
-        if c1: q3_selected.append("Nhập lại thông tin thủ công")
-        if c2: q3_selected.append("Số liệu không khớp giữa điều khoản")
-        if c3: q3_selected.append("Lỗi copy-paste thiết bị")
-        if c4: q3_selected.append("Sửa hợp đồng sát thời điểm ký")
-        if c5: q3_selected.append("Điều khoản mâu thuẫn qua nhiều phiên bản đàm phán")
-        if c6: q3_selected.append("Đối chiếu nhiều tài liệu để xác minh")
-        if c7: q3_selected.append("Chưa gặp")
+        q3_sel = []
+        if c1: q3_sel.append("Nhập lại thông tin thủ công")
+        if c2: q3_sel.append("Số liệu không khớp giữa điều khoản")
+        if c3: q3_sel.append("Lỗi copy-paste thiết bị")
+        if c4: q3_sel.append("Sửa hợp đồng sát thời điểm ký")
+        if c5: q3_sel.append("Điều khoản mâu thuẫn qua nhiều phiên bản")
+        if c6: q3_sel.append("Đối chiếu nhiều tài liệu để xác minh")
+        if c7: q3_sel.append("Chưa gặp")
 
-        # Q4 selections
-        q4_selected = []
-        if d1: q4_selected.append("Mất thời gian sửa")
-        if d2: q4_selected.append("Chậm tiến độ ký kết")
-        if d3: q4_selected.append("Rủi ro tài chính")
-        if d4: q4_selected.append("Ảnh hưởng quan hệ đối tác")
-        if d5: q4_selected.append("Bị từ chối nhận hàng hoặc bị phạt")
-        if d6: q4_selected.append("Ảnh hưởng đánh giá hiệu suất")
-        if d7: q4_selected.append("Chưa từng gặp lỗi")
+        q4_sel = []
+        if d1: q4_sel.append("Mất thời gian sửa")
+        if d2: q4_sel.append("Chậm tiến độ ký kết")
+        if d3: q4_sel.append("Rủi ro tài chính")
+        if d4: q4_sel.append("Ảnh hưởng quan hệ đối tác")
+        if d5: q4_sel.append("Bị từ chối nhận hàng hoặc bị phạt")
+        if d6: q4_sel.append("Ảnh hưởng đánh giá hiệu suất")
+        if d7: q4_sel.append("Chưa từng gặp lỗi")
 
-        st.session_state.answers["q3_pain_points"] = ", ".join(q3_selected) if q3_selected else "Không chọn"
-        st.session_state.answers["q4_consequences"] = ", ".join(q4_selected) if q4_selected else "Không chọn"
+        st.session_state.answers["q3_pain_points"] = ", ".join(q3_sel) if q3_sel else "Không chọn"
+        st.session_state.answers["q4_consequences"] = ", ".join(q4_sel) if q4_sel else "Không chọn"
         st.session_state.answers["q5_complexity"] = q5
         st.session_state.step = 3
         st.rerun()
 
-# ── STEP 3: AI Adoption ────────────────────────────────────────────────────────
+# ── STEP 3: AI Adoption + TAM ─────────────────────────────────────────────────
 elif step == 3:
     st.markdown('<div class="section-label">Phần 3 — Đánh giá giải pháp AI</div>', unsafe_allow_html=True)
-
     with st.form("form_step3"):
         st.info(
             "**Mô tả hệ thống:** Một công cụ AI có thể tự động trích xuất dữ liệu từ báo giá vào hợp đồng, "
             "phát hiện các điều khoản không nhất quán (ví dụ: bảo lãnh ngân hàng không khớp thời hạn thanh toán), "
-            "và xuất bản draft để người có thẩm quyền phê duyệt trước khi ký.",
+            "và xuất draft để người có thẩm quyền phê duyệt trước khi ký.",
             icon="🤖"
         )
 
         q6 = st.radio(
             "**Câu 6.** Bạn có sẵn sàng thử nghiệm hệ thống AI như trên không?",
-            ["Rất sẵn sàng", "Sẵn sàng", "Phân vân", "Không sẵn sàng"],
-            index=None
+            ["Rất sẵn sàng", "Sẵn sàng", "Phân vân", "Không sẵn sàng"], index=None
         )
 
         st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
@@ -240,8 +222,7 @@ elif step == 3:
                 "Chấp nhận được, nhưng cần thêm cơ chế kiểm soát",
                 "Chưa chắc, phụ thuộc vào độ chính xác thực tế của AI",
                 "Không phù hợp với quy trình của tôi"
-            ],
-            index=None
+            ], index=None
         )
 
         st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
@@ -258,7 +239,7 @@ elif step == 3:
         st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
 
         q9 = st.slider(
-            "**Câu 9.** Giả sử dữ liệu hợp đồng chỉ được xử lý và lưu trữ trong nội bộ công ty, không chia sẻ ra bên ngoài. Nếu hệ thống này được cung cấp miễn phí để dùng thử 3 tháng, khả năng bạn giới thiệu cho đồng nghiệp hoặc tổ chức là bao nhiêu?",
+            "**Câu 9.** Giả sử dữ liệu hợp đồng chỉ được xử lý và lưu trữ trong nội bộ công ty, không chia sẻ ra bên ngoài. Nếu hệ thống được cung cấp miễn phí để dùng thử 3 tháng, khả năng bạn giới thiệu cho đồng nghiệp hoặc tổ chức là bao nhiêu?",
             min_value=1, max_value=10, value=5,
             help="1 = Chắc chắn không, 10 = Chắc chắn có"
         )
@@ -266,6 +247,25 @@ elif step == 3:
         with col1: st.caption("1 = Chắc chắn không")
         with col2: st.caption(f"Bạn chọn: **{q9}/10**")
         with col3: st.caption("10 = Chắc chắn có")
+
+        st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+        st.markdown("**Câu 10 đến 12:** Vui lòng cho biết mức độ đồng ý của bạn với các nhận định sau.")
+        st.caption("1 = Hoàn toàn không đồng ý, 5 = Hoàn toàn đồng ý")
+
+        q10_pu = st.radio(
+            "**Câu 10.** Hệ thống AI hỗ trợ review hợp đồng có thể giúp tôi giảm thiểu lỗi thủ công trong công việc hàng ngày.",
+            LIKERT, index=None, horizontal=False
+        )
+
+        q11_trust = st.radio(
+            "**Câu 11.** Tôi sẵn sàng tin tưởng vào các khuyến nghị của AI khi chúng được kiểm tra và phê duyệt bởi người có thẩm quyền.",
+            LIKERT, index=None, horizontal=False
+        )
+
+        q12_intent = st.radio(
+            "**Câu 12.** Nếu tổ chức triển khai hệ thống này, tôi sẵn sàng sử dụng nó như một phần trong quy trình làm việc hàng ngày.",
+            LIKERT, index=None, horizontal=False
+        )
 
         submitted = st.form_submit_button("Tiếp theo")
 
@@ -281,6 +281,8 @@ elif step == 3:
 
         if q6 is None or q7 is None:
             st.warning("Vui lòng trả lời Câu 6 và Câu 7.")
+        elif q10_pu is None or q11_trust is None or q12_intent is None:
+            st.warning("Vui lòng trả lời đầy đủ Câu 10, 11 và 12.")
         elif len(barriers) > 2:
             st.warning("Câu 8: Vui lòng chọn tối đa 2 rào cản.")
         else:
@@ -288,42 +290,41 @@ elif step == 3:
             st.session_state.answers["q7_hitl_acceptance"] = q7
             st.session_state.answers["q8_barriers"] = ", ".join(barriers) if barriers else "Không chọn"
             st.session_state.answers["q9_nps"] = q9
+            st.session_state.answers["q10_perceived_usefulness"] = q10_pu
+            st.session_state.answers["q11_trust_hitl"] = q11_trust
+            st.session_state.answers["q12_deployment_intention"] = q12_intent
             st.session_state.step = 4
             st.rerun()
 
 # ── STEP 4: Demographics ───────────────────────────────────────────────────────
 elif step == 4:
     st.markdown('<div class="section-label">Phần 4 — Thông tin bối cảnh (không bắt buộc)</div>', unsafe_allow_html=True)
-
     with st.form("form_step4"):
-        q10 = st.selectbox(
-            "**Câu 10.** Vai trò hiện tại của bạn gần nhất với nhóm nào?",
+        q13 = st.selectbox(
+            "**Câu 13.** Vai trò hiện tại của bạn gần nhất với nhóm nào?",
             ["(Bỏ qua)", "Quản lý thương mại / Kinh doanh", "Mua hàng / Đấu thầu",
-             "Quản lý dự án", "Pháp lý / Hành chính hợp đồng",
-             "Tài chính / Kế toán", "Khác"]
+             "Quản lý dự án", "Pháp lý / Hành chính hợp đồng", "Tài chính / Kế toán", "Khác"]
         )
-        q11 = st.selectbox(
-            "**Câu 11.** Số năm kinh nghiệm làm việc với hợp đồng B2B?",
+        q14 = st.selectbox(
+            "**Câu 14.** Số năm kinh nghiệm làm việc với hợp đồng B2B?",
             ["(Bỏ qua)", "Dưới 2 năm", "2 đến 5 năm", "5 đến 10 năm", "Trên 10 năm"]
         )
-        q12 = st.selectbox(
-            "**Câu 12.** Ngành bạn đang làm việc?",
+        q15 = st.selectbox(
+            "**Câu 15.** Ngành bạn đang làm việc?",
             ["(Bỏ qua)", "Thiết bị công nghiệp / Năng lượng", "Xây dựng / EPC / Tổng thầu",
              "Logistics / Vận tải", "Sản xuất / Chế biến", "Khác"]
         )
-
         st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
         email = st.text_input(
             "📧 Nếu muốn nhận tóm tắt kết quả nghiên cứu, để lại email tại đây (không bắt buộc):",
             placeholder="example@company.com"
         )
-
         submitted = st.form_submit_button("Gửi khảo sát")
 
     if submitted:
-        st.session_state.answers["q10_role"] = q10
-        st.session_state.answers["q11_experience"] = q11
-        st.session_state.answers["q12_industry"] = q12
+        st.session_state.answers["q13_role"] = q13
+        st.session_state.answers["q14_experience"] = q14
+        st.session_state.answers["q15_industry"] = q15
         st.session_state.answers["email_optional"] = email if email else ""
         st.session_state.answers["submitted_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -349,12 +350,10 @@ elif step == 100:
 elif step == 101:
     st.error("Có lỗi xảy ra khi lưu phản hồi. Vui lòng thử lại.")
     if st.button("Thử lại"):
-        success = save_response(st.session_state.answers)
-        if success:
+        if save_response(st.session_state.answers):
             st.session_state.step = 100
             st.rerun()
 
-# ── DISQUALIFIED ───────────────────────────────────────────────────────────────
 elif step == 99:
     st.markdown("""
     <div class="disqualified-box">
